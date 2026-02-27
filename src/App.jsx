@@ -27,14 +27,18 @@ if (typeof __firebase_config !== 'undefined') {
 } else {
   // [Inference] You will need to replace these empty strings with your own Firebase Project details
   // when deploying to GitHub Pages so the login system works on your live site. This is expected behavior.
-  firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+  const firebaseConfig = {
+  apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
+  authDomain: "smartplanner-3838c.firebaseapp.com",
+  projectId: "smartplanner-3838c",
+  storageBucket: "smartplanner-3838c.firebasestorage.app",
+  messagingSenderId: "461929417011",
+  appId: "1:461929417011:web:c814b579543e89b1371646",
+  measurementId: "G-4KYNCYKCJK"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 }
 
 const app = firebaseConfig && firebaseConfig.apiKey !== "YOUR_API_KEY" ? initializeApp(firebaseConfig) : null;
@@ -43,7 +47,7 @@ const db = app ? getFirestore(app) : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- API Utilities ---
-const apiKey = ""; // Provided by execution environment
+const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; // Provided by execution environment
 
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];

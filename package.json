@@ -13,6 +13,7 @@
     "deploy": "npx gh-pages -d dist"
   },
   "dependencies": {
+    "firebase": "^12.9.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
