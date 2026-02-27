@@ -28,14 +28,14 @@ if (typeof __firebase_config !== 'undefined') {
   // [Inference] You will need to replace these empty strings with your own Firebase Project details
   // when deploying to GitHub Pages so the login system works on your live site. This is expected behavior.
   firebaseConfig = {
-  apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
-  authDomain: "smartplanner-3838c.firebaseapp.com",
-  projectId: "smartplanner-3838c",
-  storageBucket: "smartplanner-3838c.firebasestorage.app",
-  messagingSenderId: "461929417011",
-  appId: "1:461929417011:web:c814b579543e89b1371646",
-  measurementId: "G-4KYNCYKCJK"
-};
+    apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
+    authDomain: "smartplanner-3838c.firebaseapp.com",
+    projectId: "smartplanner-3838c",
+    storageBucket: "smartplanner-3838c.firebasestorage.app",
+    messagingSenderId: "461929417011",
+    appId: "1:461929417011:web:c814b579543e89b1371646",
+    measurementId: "G-4KYNCYKCJK"
+  };
 
 }
 
