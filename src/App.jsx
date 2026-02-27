@@ -27,7 +27,7 @@ if (typeof __firebase_config !== 'undefined') {
 } else {
   // [Inference] You will need to replace these empty strings with your own Firebase Project details
   // when deploying to GitHub Pages so the login system works on your live site. This is expected behavior.
-  const firebaseConfig = {
+  firebaseConfig = {
   apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
   authDomain: "smartplanner-3838c.firebaseapp.com",
   projectId: "smartplanner-3838c",
