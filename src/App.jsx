@@ -20,39 +20,45 @@ import {
 } from 'lucide-react';
 
 // --- Firebase Cloud Database Setup ---
-let firebaseConfig = null;
-if (typeof __firebase_config !== 'undefined') {
-  // Uses Canvas built-in config if available
-  firebaseConfig = JSON.parse(__firebase_config);
-} else {
-  // [Inference] You will need to replace these empty strings with your own Firebase Project details
-  // when deploying to GitHub Pages so the login system works on your live site. This is expected behavior.
-  firebaseConfig = {
-    apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
-    authDomain: "smartplanner-3838c.firebaseapp.com",
-    projectId: "smartplanner-3838c",
-    storageBucket: "smartplanner-3838c.firebasestorage.app",
-    messagingSenderId: "461929417011",
-    appId: "1:461929417011:web:c814b579543e89b1371646",
-    measurementId: "G-4KYNCYKCJK"
-  };
+let isCanvas = false;
 
+// Default to your custom Firebase Project details for GitHub Pages/Local deployment
+let firebaseConfig = {
+  apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
+  authDomain: "smartplanner-3838c.firebaseapp.com",
+  projectId: "smartplanner-3838c",
+  storageBucket: "smartplanner-3838c.firebasestorage.app",
+  messagingSenderId: "461929417011",
+  appId: "1:461929417011:web:c814b579543e89b1371646",
+  measurementId: "G-4KYNCYKCJK"
+};
+
+// If running inside the Canvas preview, use the Canvas's injected Firebase environment
+// This prevents token mismatch and "auth/configuration-not-found" errors in the preview.
+if (typeof __firebase_config !== 'undefined') {
+  firebaseConfig = JSON.parse(__firebase_config);
+  isCanvas = true;
 }
 
-const app = firebaseConfig && firebaseConfig.apiKey !== "YOUR_API_KEY" ? initializeApp(firebaseConfig) : null;
-const auth = app ? getAuth(app) : null;
-const db = app ? getFirestore(app) : null;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : "smartplanner-3838c";
+
+const isConfigured = true;
 
 // --- API Utilities ---
-const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; // Provided by execution environment
+const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
   for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `HTTP error! status: ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       if (i === retries - 1) throw error;
@@ -165,7 +171,6 @@ const HomeView = ({ setActiveTab, setTheme, currentTheme }) => {
 
   return (
     <div className="space-y-16 pb-20 animate-in fade-in duration-500">
-      {/* Hero Section */}
       <div className="text-center py-16 px-4 bg-white rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
         <div className="relative z-10 max-w-3xl mx-auto space-y-6">
@@ -178,7 +183,6 @@ const HomeView = ({ setActiveTab, setTheme, currentTheme }) => {
         </div>
       </div>
 
-      {/* Features Grid */}
       <div className="space-y-8">
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 px-2"><Sparkles className="text-indigo-500" size={24} />Explore Features</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -221,7 +225,6 @@ const HomeView = ({ setActiveTab, setTheme, currentTheme }) => {
         </div>
       </div>
 
-      {/* Developer Section */}
       <div className="bg-indigo-900 text-white rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-800 rounded-full blur-3xl opacity-20 -mr-20 -mt-20"></div>
         <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
@@ -266,7 +269,6 @@ const HomeView = ({ setActiveTab, setTheme, currentTheme }) => {
         </div>
       </div>
 
-      {/* Dedicated Themes Section */}
       <div ref={themesRef} className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
         <div className="text-center space-y-2"><h2 className="text-3xl font-extrabold text-slate-900 flex items-center justify-center gap-3"><Palette className="text-indigo-600" size={32} />Personalize Your Hub</h2><p className="text-slate-500 max-w-lg mx-auto">Select a theme that matches your current study environment.</p></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">{allThemes.map(t => (
@@ -274,7 +276,6 @@ const HomeView = ({ setActiveTab, setTheme, currentTheme }) => {
           ))}</div>
       </div>
 
-      {/* Verified Truth Directive Note */}
       <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 flex gap-4 items-start"><AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={24} /><div><h3 className="text-amber-800 font-bold mb-2">[Unverified] Expected AI Behavior</h3><p className="text-amber-700 text-sm leading-relaxed">Topic extraction and difficulty estimations are <strong>[Inference]</strong> based on academic knowledge. This is expected behavior, not a guaranteed absolute truth regarding specific demands.</p></div></div>
     </div>
   );
@@ -575,28 +576,24 @@ const themeStyles = `
 `;
 
 export default function App() {
-  // --- Core Application State ---
   const [activeTab, setActiveTab] = useState('home');
   const [theme, setTheme] = useState(() => localStorage.getItem('smartPlannerTheme') || 'light');
   
-  // --- Cloud Auth State ---
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [authMode, setAuthMode] = useState('login'); 
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState('');
 
-  // --- Cloud Data States ---
   const [plans, setPlans] = useState([]);
-  const [todos, setTodos] = useState([]); // Master computed array
+  const [todos, setTodos] = useState([]); 
   const [customTodos, setCustomTodos] = useState([]);
   const [dailySchedules, setDailySchedules] = useState({});
   const [notes, setNotes] = useState([]);
   const [aiTaskCompletions, setAiTaskCompletions] = useState({});
 
-  // --- Form States ---
   const [subjectName, setSubjectName] = useState('');
   const [syllabus, setSyllabus] = useState('');
   const [fileData, setFileData] = useState(null);
@@ -611,16 +608,15 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem('smartPlannerTheme', theme); }, [theme]);
 
-  // --- FIREBASE AUTHENTICATION ---
   useEffect(() => {
     if (!auth) { setAuthLoading(false); return; }
     
     const initAuth = async () => {
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        if (isCanvas && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else if (!auth.currentUser) {
-          await signInAnonymously(auth);
+          await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Check Firebase Auth settings. Error: ", err));
         }
       } catch (err) {
         console.error("Auth init error:", err);
@@ -637,6 +633,7 @@ export default function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    if (!auth) { setAuthError("Firebase not initialized."); return; }
     setAuthLoading(true); setAuthError('');
     try {
       if (authMode === 'login') {
@@ -656,27 +653,21 @@ export default function App() {
     if (auth) await signOut(auth);
   };
 
-  // --- FIREBASE REAL-TIME CLOUD SYNC ---
   useEffect(() => {
     if (!user || !db) {
-       // Clear local arrays if user signs out to protect privacy
        setPlans([]); setCustomTodos([]); setDailySchedules({}); setNotes([]); setAiTaskCompletions({});
        return; 
     }
 
-    // 1. Sync Plans
     const plansRef = collection(db, 'artifacts', appId, 'users', user.uid, 'plans');
     const unsubPlans = onSnapshot(plansRef, (snap) => setPlans(snap.docs.map(d => d.data())), e => console.error(e));
 
-    // 2. Sync Custom Todos
     const todosRef = collection(db, 'artifacts', appId, 'users', user.uid, 'customTodos');
     const unsubTodos = onSnapshot(todosRef, (snap) => setCustomTodos(snap.docs.map(d => d.data())), e => console.error(e));
 
-    // 3. Sync Notes
     const notesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notes');
     const unsubNotes = onSnapshot(notesRef, (snap) => setNotes(snap.docs.map(d => d.data())), e => console.error(e));
 
-    // 4. Sync AI Completions (Stored as {completed: true} in docs named by taskId)
     const completionsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'aiTaskCompletions');
     const unsubComps = onSnapshot(completionsRef, (snap) => {
       const comps = {};
@@ -684,7 +675,6 @@ export default function App() {
       setAiTaskCompletions(comps);
     }, e => console.error(e));
 
-    // 5. Sync Daily Schedules (Stored as arrays inside docs named by dateStr)
     const schedulesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'dailySchedules');
     const unsubScheds = onSnapshot(schedulesRef, (snap) => {
       const scheds = {};
@@ -695,7 +685,6 @@ export default function App() {
     return () => { unsubPlans(); unsubTodos(); unsubNotes(); unsubComps(); unsubScheds(); };
   }, [user]);
 
-  // --- Compute Master AI Todo Array ---
   useEffect(() => {
     const allAiTodos = plans.flatMap(plan => 
       plan.schedule.flatMap(day => 
@@ -716,7 +705,6 @@ export default function App() {
     setTodos(allAiTodos);
   }, [plans, aiTaskCompletions]);
 
-  // --- FIREBASE WRITE ACTIONS ---
   const handleGenerate = async () => {
     if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
     if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content.'); return; }
@@ -728,7 +716,10 @@ export default function App() {
       }
       setSubjectName(''); setSyllabus(''); setFileData(null); setFileName('');
       setActiveTab('todo');
-    } catch (err) { setError('Error generating plan.'); } finally { setIsGenerating(false); }
+    } catch (err) { 
+      console.error("Generation Error:", err);
+      setError(`Error: ${err.message}. If using a PDF, try pasting the text instead.`); 
+    } finally { setIsGenerating(false); }
   };
 
   const deletePlan = async (id) => {
@@ -806,7 +797,6 @@ export default function App() {
     <div className={`min-h-screen bg-slate-50 text-slate-800 font-sans theme-${theme}`}>
       <style>{themeStyles}</style>
 
-      {/* --- Authentication Modal --- */}
       {showAuthModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-slate-200">
@@ -848,7 +838,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- Main Navigation --- */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 md:px-8 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between py-3">
           <div onClick={() => setActiveTab('home')} className="flex items-center gap-2 cursor-pointer"><div className="bg-indigo-600 p-1.5 rounded-lg text-white"><BrainCircuit size={20} /></div><h1 className="font-bold text-slate-900 hidden sm:block">SmartPlanner</h1></div>
@@ -861,7 +850,6 @@ export default function App() {
             
             <div className="h-6 w-px bg-slate-200 mx-1 sm:mx-2 shrink-0"></div>
             
-            {/* Theme Toggle */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0 relative"><Palette size={16} className="text-slate-400 hidden lg:block" /><button onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)} className="flex items-center gap-1 p-1 sm:px-3 sm:py-2 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors pointer-cursor"><span className="capitalize">{theme}</span><ChevronDown size={14} /></button>
               {isThemeDropdownOpen && (<><div className="fixed inset-0 z-40" onClick={() => setIsThemeDropdownOpen(false)}></div><div className="absolute right-0 top-full mt-2 w-32 bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden z-50 py-1">{availableThemes.map((t) => (<button key={t} onClick={() => { setTheme(t); setIsThemeDropdownOpen(false); }} className={`w-full text-left px-4 py-2 text-sm transition-colors capitalize ${theme === t ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-700 hover:bg-slate-50'}`}>{t}</button>))}</div></>)}
             </div>
@@ -869,16 +857,14 @@ export default function App() {
         </div>
       </nav>
 
-      {/* --- Main Content Area --- */}
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
 
-        {/* --- Cloud Sync & Auth Banner (Moved below Nav) --- */}
         <div className="bg-card p-4 rounded-2xl border border-custom shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {authLoading ? (
               <><Loader2 size={18} className="animate-spin text-sub" /><span className="text-sm font-bold text-sub">Checking sync status...</span></>
             ) : isAnonymous ? (
-              <><CloudOff size={20} className="text-amber-500" /><span className="text-sm font-bold text-custom">Local Mode <span className="font-normal text-sub">(Data not synced)</span></span></>
+              <><CloudOff size={20} className="text-amber-500" /><span className="text-sm font-bold text-custom">Guest Mode <span className="font-normal text-sub">(Data not synced)</span></span></>
             ) : (
               <><Cloud size={20} className="text-emerald-500" /><span className="text-sm font-bold text-custom">Cloud Sync Active <span className="font-normal text-sub">({user?.email})</span></span></>
             )}
@@ -897,17 +883,6 @@ export default function App() {
             )}
           </div>
         </div>
-
-        {/* Offline Warning for Github Pages (if API key is missing) */}
-        {!db && (
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
-            <CloudOff className="text-amber-600 shrink-0 mt-0.5" size={20} />
-            <div>
-              <h3 className="font-bold text-amber-800 text-sm">Cloud Sync Offline</h3>
-              <p className="text-amber-700 text-xs mt-1">To enable saving data across devices on your live site, you must add your Firebase Project configuration inside `App.jsx`.</p>
-            </div>
-          </div>
-        )}
 
         {activeTab === 'home' && <HomeView setActiveTab={setActiveTab} setTheme={setTheme} currentTheme={theme} />}
         {activeTab === 'planner' && (
