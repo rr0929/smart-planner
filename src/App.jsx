@@ -19,36 +19,34 @@ import {
   ExternalLink, GraduationCap, MapPin, LogIn, LogOut, Mail, Lock, Cloud, CloudOff
 } from 'lucide-react';
 
+// --- Environment Detection ---
+const isCanvasEnvironment = typeof __firebase_config !== 'undefined';
+
 // --- Firebase Cloud Database Setup ---
-let isCanvas = false;
+let firebaseConfig = null;
 
-// Default to your custom Firebase Project details for GitHub Pages/Local deployment
-let firebaseConfig = {
-  apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
-  authDomain: "smartplanner-3838c.firebaseapp.com",
-  projectId: "smartplanner-3838c",
-  storageBucket: "smartplanner-3838c.firebasestorage.app",
-  messagingSenderId: "461929417011",
-  appId: "1:461929417011:web:c814b579543e89b1371646",
-  measurementId: "G-4KYNCYKCJK"
-};
-
-// If running inside the Canvas preview, use the Canvas's injected Firebase environment
-// This prevents token mismatch and "auth/configuration-not-found" errors in the preview.
-if (typeof __firebase_config !== 'undefined') {
+if (isCanvasEnvironment) {
   firebaseConfig = JSON.parse(__firebase_config);
-  isCanvas = true;
+} else {
+  firebaseConfig = {
+    apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
+    authDomain: "smartplanner-3838c.firebaseapp.com",
+    projectId: "smartplanner-3838c",
+    storageBucket: "smartplanner-3838c.firebasestorage.app",
+    messagingSenderId: "461929417011",
+    appId: "1:461929417011:web:c814b579543e89b1371646",
+    measurementId: "G-4KYNCYKCJK"
+  };
 }
 
+// [FIX 1]: Unconditionally initialize Firebase so 'app' and 'auth' are never null.
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : "smartplanner-3838c";
-
-const isConfigured = true;
+const appId = isCanvasEnvironment && typeof __app_id !== 'undefined' ? __app_id : "smartplanner-3838c";
 
 // --- API Utilities ---
-// [IMPORTANT] Paste your AIza... Gemini key between these quotes on your local PC!
+// [IMPORTANT] Paste your AIzaSyBM... Gemini key between these quotes on your local PC!
 const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
@@ -69,8 +67,8 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 };
 
 const generateStudyPlan = async (subjectName, syllabusText, fileData, startDate, endDate, dailyHours) => {
-  // Auto-switch to a stable public model if deployed to GitHub Pages
-  const modelName = isCanvas ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
+  // [FIX 2]: Auto-switch to the stable public model if running outside the Canvas.
+  const modelName = isCanvasEnvironment ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
   
   const systemInstruction = `You are an expert academic study planner for the subject: "${subjectName}". 
@@ -616,10 +614,10 @@ export default function App() {
     
     const initAuth = async () => {
       try {
-        if (isCanvas && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        if (isCanvasEnvironment && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else if (!auth.currentUser) {
-          await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Check Firebase Auth settings. Error: ", err));
+          await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Error: ", err));
         }
       } catch (err) {
         console.error("Auth init error:", err);
@@ -636,7 +634,9 @@ export default function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (!auth) { setAuthError("Firebase not initialized."); return; }
+    // [FIX 3]: Prevent action if auth is somehow null
+    if (!auth) { setAuthError("Firebase connection failed."); return; }
+    
     setAuthLoading(true); setAuthError('');
     try {
       if (authMode === 'login') {
@@ -646,7 +646,11 @@ export default function App() {
       }
       setShowAuthModal(false);
     } catch (err) {
-      setAuthError(err.message.replace('Firebase: ', ''));
+      if (err.code === 'auth/configuration-not-found') {
+         setAuthError('Error: Please enable Email/Password authentication in your Firebase Console.');
+      } else {
+         setAuthError(err.message.replace('Firebase: ', ''));
+      }
     } finally {
       setAuthLoading(false);
     }
