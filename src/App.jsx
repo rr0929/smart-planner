@@ -614,8 +614,16 @@ export default function App() {
     
     const initAuth = async () => {
       try {
+        // [FIX 3]: Handle the custom token correctly and catch the mismatch error
         if (isCanvasEnvironment && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenErr) {
+             console.warn("Canvas token mismatch. Falling back to anonymous sign-in.", tokenErr);
+             if (!auth.currentUser) {
+               await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Error: ", err));
+             }
+          }
         } else if (!auth.currentUser) {
           await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Error: ", err));
         }
@@ -634,7 +642,6 @@ export default function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    // [FIX 3]: Prevent action if auth is somehow null
     if (!auth) { setAuthError("Firebase connection failed."); return; }
     
     setAuthLoading(true); setAuthError('');
@@ -714,8 +721,8 @@ export default function App() {
 
   const handleGenerate = async () => {
     if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
-    if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content.'); return; }
-    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx (line 42).'); return; }
+    if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content or upload a PDF.'); return; }
+    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx.'); return; }
     
     setError(''); setIsGenerating(true);
     try {
@@ -832,7 +839,7 @@ export default function App() {
                   <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} required minLength="6" className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500"/>
                 </div>
               </div>
-              {authError && <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl flex items-center gap-2"><AlertCircle size={14}/> {authError}</div>}
+              {authError && <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl flex items-center gap-2"><AlertCircle size={24} className="shrink-0"/> {authError}</div>}
               <button type="submit" disabled={authLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                 {authLoading ? <Loader2 size={18} className="animate-spin" /> : authMode === 'login' ? 'Login' : 'Sign Up'}
               </button>
