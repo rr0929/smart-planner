@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
-  signInWithCustomToken, 
   signInAnonymously, 
   onAuthStateChanged, 
   createUserWithEmailAndPassword, 
@@ -19,35 +18,28 @@ import {
   ExternalLink, GraduationCap, MapPin, LogIn, LogOut, Mail, Lock, Cloud, CloudOff
 } from 'lucide-react';
 
-// --- Environment Detection ---
-const isCanvasEnvironment = typeof __firebase_config !== 'undefined';
-
 // --- Firebase Cloud Database Setup ---
-let firebaseConfig = null;
+// [Inference] Hardcoded to your custom project.
+const firebaseConfig = {
+  apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
+  authDomain: "smartplanner-3838c.firebaseapp.com",
+  projectId: "smartplanner-3838c",
+  storageBucket: "smartplanner-3838c.firebasestorage.app",
+  messagingSenderId: "461929417011",
+  appId: "1:461929417011:web:c814b579543e89b1371646",
+  measurementId: "G-4KYNCYKCJK"
+};
 
-if (isCanvasEnvironment) {
-  firebaseConfig = JSON.parse(__firebase_config);
-} else {
-  firebaseConfig = {
-    apiKey: "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE",
-    authDomain: "smartplanner-3838c.firebaseapp.com",
-    projectId: "smartplanner-3838c",
-    storageBucket: "smartplanner-3838c.firebasestorage.app",
-    messagingSenderId: "461929417011",
-    appId: "1:461929417011:web:c814b579543e89b1371646",
-    measurementId: "G-4KYNCYKCJK"
-  };
-}
-
-// [FIX 1]: Unconditionally initialize Firebase so 'app' and 'auth' are never null.
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = isCanvasEnvironment && typeof __app_id !== 'undefined' ? __app_id : "smartplanner-3838c";
+const appId = "smartplanner-3838c";
+
+const isConfigured = true;
 
 // --- API Utilities ---
 // [IMPORTANT] Paste your AIzaSyBM... Gemini key between these quotes on your local PC!
-const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; 
+const apiKey = ""; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
@@ -67,9 +59,8 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 };
 
 const generateStudyPlan = async (subjectName, syllabusText, fileData, startDate, endDate, dailyHours) => {
-  // [FIX 2]: Auto-switch to the stable public model if running outside the Canvas.
-  const modelName = isCanvasEnvironment ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  // [Inference] Upgraded to gemini-1.5-pro, which is fully designed to handle application/pdf payloads.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
   
   const systemInstruction = `You are an expert academic study planner for the subject: "${subjectName}". 
 Your task is to analyze a provided syllabus and create a realistic, day-by-day study schedule between the start date and end date.
@@ -82,7 +73,7 @@ Return the schedule STRICTLY matching the provided JSON schema.`;
   const parts = [];
   if (fileData) {
     parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: "Please extract the syllabus topics from the provided document." });
+    parts.push({ text: "Please carefully extract and organize the syllabus topics from the provided PDF document." });
   }
   if (syllabusText && syllabusText.trim()) {
     parts.push({ text: `Additional Syllabus Text:\n${syllabusText}` });
@@ -614,18 +605,10 @@ export default function App() {
     
     const initAuth = async () => {
       try {
-        // [FIX 3]: Handle the custom token correctly and catch the mismatch error
-        if (isCanvasEnvironment && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          try {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (tokenErr) {
-             console.warn("Canvas token mismatch. Falling back to anonymous sign-in.", tokenErr);
-             if (!auth.currentUser) {
-               await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Error: ", err));
-             }
-          }
-        } else if (!auth.currentUser) {
-          await signInAnonymously(auth).catch((err) => console.warn("Guest mode disabled. Error: ", err));
+        // [Inference] We removed the custom token check because you are hardcoding your own Firebase project.
+        // It will now just authenticate anonymously or wait for user login.
+        if (!auth.currentUser) {
+          await signInAnonymously(auth).catch((err) => console.warn("Guest mode login failed, manual login required.", err));
         }
       } catch (err) {
         console.error("Auth init error:", err);
@@ -722,7 +705,7 @@ export default function App() {
   const handleGenerate = async () => {
     if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
     if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content or upload a PDF.'); return; }
-    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx.'); return; }
+    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx (line 42).'); return; }
     
     setError(''); setIsGenerating(true);
     try {
