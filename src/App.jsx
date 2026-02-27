@@ -39,7 +39,7 @@ if (typeof __firebase_config !== 'undefined') {
 
 }
 
-const app = firebaseConfig && firebaseConfig.apiKey !== "AIzaSyBAFxF6ybj4g1EpBathg0oGael7TnYBrWE" ? initializeApp(firebaseConfig) : null;
+const app = firebaseConfig && firebaseConfig.apiKey !== "YOUR_API_KEY" ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
