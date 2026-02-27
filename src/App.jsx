@@ -48,6 +48,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : "smartplanner-3838c";
 const isConfigured = true;
 
 // --- API Utilities ---
+// [IMPORTANT] Paste your AIza... Gemini key between these quotes on your local PC!
 const apiKey = "AIzaSyBM_neRfdZl0LP0qm6upTPz3x2ke7kZZQU"; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
@@ -68,7 +69,9 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 };
 
 const generateStudyPlan = async (subjectName, syllabusText, fileData, startDate, endDate, dailyHours) => {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  // Auto-switch to a stable public model if deployed to GitHub Pages
+  const modelName = isCanvas ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
   
   const systemInstruction = `You are an expert academic study planner for the subject: "${subjectName}". 
 Your task is to analyze a provided syllabus and create a realistic, day-by-day study schedule between the start date and end date.
@@ -142,7 +145,7 @@ Return the schedule STRICTLY matching the provided JSON schema.`;
   });
 
   const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!textResponse) throw new Error("Failed to parse AI response");
+  if (!textResponse) throw new Error("Failed to parse AI response. Check API quotas or payload formatting.");
   
   const parsed = JSON.parse(textResponse);
   return { ...parsed, id: Date.now().toString(), subjectName };
@@ -708,6 +711,8 @@ export default function App() {
   const handleGenerate = async () => {
     if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
     if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content.'); return; }
+    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx (line 42).'); return; }
+    
     setError(''); setIsGenerating(true);
     try {
       const newPlan = await generateStudyPlan(subjectName, syllabus, fileData, startDate, endDate, dailyHours);
@@ -717,8 +722,8 @@ export default function App() {
       setSubjectName(''); setSyllabus(''); setFileData(null); setFileName('');
       setActiveTab('todo');
     } catch (err) { 
-      console.error("Generation Error:", err);
-      setError(`Error: ${err.message}. If using a PDF, try pasting the text instead.`); 
+      console.error("AI Generation Error:", err);
+      setError(`AI Error: ${err.message}`); 
     } finally { setIsGenerating(false); }
   };
 
@@ -797,6 +802,7 @@ export default function App() {
     <div className={`min-h-screen bg-slate-50 text-slate-800 font-sans theme-${theme}`}>
       <style>{themeStyles}</style>
 
+      {/* --- Authentication Modal --- */}
       {showAuthModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-slate-200">
@@ -838,6 +844,7 @@ export default function App() {
         </div>
       )}
 
+      {/* --- Main Navigation --- */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 md:px-8 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between py-3">
           <div onClick={() => setActiveTab('home')} className="flex items-center gap-2 cursor-pointer"><div className="bg-indigo-600 p-1.5 rounded-lg text-white"><BrainCircuit size={20} /></div><h1 className="font-bold text-slate-900 hidden sm:block">SmartPlanner</h1></div>
@@ -859,24 +866,24 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
 
-        <div className="bg-card p-4 rounded-2xl border border-custom shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {authLoading ? (
-              <><Loader2 size={18} className="animate-spin text-sub" /><span className="text-sm font-bold text-sub">Checking sync status...</span></>
+              <><Loader2 size={18} className="animate-spin text-slate-400" /><span className="text-sm font-bold text-slate-500">Checking sync status...</span></>
             ) : isAnonymous ? (
-              <><CloudOff size={20} className="text-amber-500" /><span className="text-sm font-bold text-custom">Guest Mode <span className="font-normal text-sub">(Data not synced)</span></span></>
+              <><CloudOff size={20} className="text-amber-500" /><span className="text-sm font-bold text-slate-700">Guest Mode <span className="font-normal text-slate-500">(Data not synced)</span></span></>
             ) : (
-              <><Cloud size={20} className="text-emerald-500" /><span className="text-sm font-bold text-custom">Cloud Sync Active <span className="font-normal text-sub">({user?.email})</span></span></>
+              <><Cloud size={20} className="text-emerald-500" /><span className="text-sm font-bold text-slate-700">Cloud Sync Active <span className="font-normal text-slate-500">({user?.email})</span></span></>
             )}
           </div>
           <div>
             {!authLoading && (
               isAnonymous ? (
-                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity">
+                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity">
                   <LogIn size={16} /> Login to Sync
                 </button>
               ) : (
-                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-custom text-custom hover:opacity-70 text-xs font-bold transition-colors">
+                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-colors">
                   <LogOut size={16} /> Logout
                 </button>
               )
@@ -898,7 +905,7 @@ export default function App() {
                     <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Paste Content</label><textarea value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Or paste text here..." className="w-full h-24 p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-xs"/></div>
                     <div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Start</label><CustomDatePicker value={startDate} onChange={setStartDate} minDate={new Date().toISOString().split('T')[0]} /></div><div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">End</label><CustomDatePicker value={endDate} onChange={setEndDate} minDate={startDate} /></div></div>
                     <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Study Hours</label><input type="number" min="1" max="24" value={dailyHours} onChange={(e) => setDailyHours(e.target.value)} onBlur={(e) => { let v = parseInt(e.target.value); setDailyHours(isNaN(v) || v < 1 ? 1 : v > 24 ? 24 : v); }} className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none" /></div>
-                    {error && <div className="p-3 bg-red-50 text-red-700 rounded-xl text-xs flex items-start gap-2"><AlertCircle size={14} className="shrink-0" /><span>{error}</span></div>}
+                    {error && <div className="p-3 bg-red-50 text-red-700 rounded-xl text-xs flex items-start gap-2"><AlertCircle size={18} className="shrink-0" /><span className="font-medium">{error}</span></div>}
                     <button onClick={handleGenerate} disabled={isGenerating} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-bold flex justify-center items-center gap-2">{isGenerating ? <><Loader2 size={18} className="animate-spin" />Analyzing...</> : <>Generate Plan</>}</button>
                   </div>
                 </div>
