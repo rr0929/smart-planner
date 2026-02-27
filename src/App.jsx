@@ -1,43 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
 import { 
-  Calendar, 
-  BookOpen, 
-  Clock, 
-  BrainCircuit, 
-  ChevronRight, 
-  AlertCircle,
-  Loader2,
-  CalendarDays,
-  Gauge,
-  UploadCloud,
-  FileText,
-  X,
-  LayoutDashboard,
-  ListTodo,
-  CheckCircle2,
-  Circle,
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  Plus,
-  Trash2,
-  Edit2,
-  Flag,
-  ArrowRight,
-  Sparkles,
-  Target,
-  Palette,
-  StickyNote,
-  Save,
-  BarChart3,
-  TrendingUp,
-  History,
-  Tag,
-  User,
-  ExternalLink,
-  GraduationCap,
-  MapPin
+  getAuth, 
+  signInWithCustomToken, 
+  signInAnonymously, 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut 
+} from 'firebase/auth';
+import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
+
+import { 
+  Calendar, BookOpen, Clock, BrainCircuit, ChevronRight, AlertCircle, Loader2, CalendarDays,
+  Gauge, UploadCloud, FileText, X, LayoutDashboard, ListTodo, CheckCircle2, Circle,
+  ChevronDown, ChevronUp, ChevronLeft, Plus, Trash2, Edit2, Flag, ArrowRight, Sparkles,
+  Target, Palette, StickyNote, Save, BarChart3, TrendingUp, History, Tag, User, 
+  ExternalLink, GraduationCap, MapPin, LogIn, LogOut, Mail, Lock, Cloud, CloudOff
 } from 'lucide-react';
+
+// --- Firebase Cloud Database Setup ---
+let firebaseConfig = null;
+if (typeof __firebase_config !== 'undefined') {
+  // Uses Canvas built-in config if available
+  firebaseConfig = JSON.parse(__firebase_config);
+} else {
+  // [Inference] You will need to replace these empty strings with your own Firebase Project details
+  // when deploying to GitHub Pages so the login system works on your live site. This is expected behavior.
+  firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+}
+
+const app = firebaseConfig && firebaseConfig.apiKey !== "YOUR_API_KEY" ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- API Utilities ---
 const apiKey = ""; // Provided by execution environment
@@ -374,7 +377,7 @@ const TodoView = ({ todos, toggleTodo, customTodos, addCustomTodo, toggleCustomT
         <div className="flex flex-col gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 className="text-lg font-bold text-indigo-600 flex items-center gap-2 mb-4"><CalendarDays size={20} /> Today's Personal Tasks</h3>{renderTaskList(todayTasks, "No personal tasks for today.")}</div>
           {overdueTasks.length > 0 && (<div className="bg-red-50/30 p-6 rounded-2xl border border-red-100"><h3 className="text-lg font-bold text-red-600 flex items-center gap-2 mb-4"><AlertCircle size={20} /> Overdue Tasks</h3>{renderTaskList(overdueTasks, "No overdue tasks.")}</div>)}
-          {upcomingTasks.length > 0 && (<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 className="text-lg font-bold text-slate-50 flex items-center gap-2 mb-4"><Clock size={20} /> Upcoming Tasks</h3>{renderTaskList(upcomingTasks, "No upcoming tasks.")}</div>)}
+          {upcomingTasks.length > 0 && (<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 className="text-lg font-bold text-slate-500 flex items-center gap-2 mb-4"><Clock size={20} /> Upcoming Tasks</h3>{renderTaskList(upcomingTasks, "No upcoming tasks.")}</div>)}
         </div>
       </div>
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-auto"><h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><Plus className="text-indigo-500" size={20} />Create New Personal Task</h2>
@@ -459,9 +462,9 @@ const CalendarView = ({ plans, dailySchedules, addDailySchedule, deleteDailySche
 const NotesView = ({ notes, setNotes }) => {
   const [activeNoteId, setActiveNoteId] = useState(null);
   const activeNote = notes.find(n => n.id === activeNoteId);
-  const handleCreateNote = () => { const newNote = { id: Date.now().toString(), title: 'New Subject', content: '', date: new Date().toISOString().split('T')[0] }; setNotes([newNote, ...notes]); setActiveNoteId(newNote.id); };
-  const handleUpdateNote = (field, value) => { setNotes(notes.map(n => n.id === activeNoteId ? { ...n, [field]: value, lastEdited: new Date().toLocaleTimeString() } : n)); };
-  const handleDeleteNote = (e, id) => { e.stopPropagation(); setNotes(notes.filter(n => n.id !== id)); if (activeNoteId === id) setActiveNoteId(null); };
+  const handleCreateNote = () => { const newNote = { id: Date.now().toString(), title: 'New Subject', content: '', date: new Date().toISOString().split('T')[0] }; setNotes(newNote); setActiveNoteId(newNote.id); };
+  const handleUpdateNote = (field, value) => { setNotes({ ...activeNote, [field]: value, lastEdited: new Date().toLocaleTimeString() }, true); };
+  const handleDeleteNote = (e, id) => { e.stopPropagation(); setNotes({ id }, false, true); if (activeNoteId === id) setActiveNoteId(null); };
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full min-h-[600px] items-start relative">
@@ -570,49 +573,217 @@ const themeStyles = `
 `;
 
 export default function App() {
-  const [plans, setPlans] = useState(() => JSON.parse(localStorage.getItem('smartPlannerPlans') || '[]'));
-  const [todos, setTodos] = useState([]);
+  // --- Core Application State ---
   const [activeTab, setActiveTab] = useState('home');
   const [theme, setTheme] = useState(() => localStorage.getItem('smartPlannerTheme') || 'light');
+  
+  // --- Cloud Auth State ---
+  const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+
+  // --- Cloud Data States ---
+  const [plans, setPlans] = useState([]);
+  const [todos, setTodos] = useState([]); // Master computed array
+  const [customTodos, setCustomTodos] = useState([]);
+  const [dailySchedules, setDailySchedules] = useState({});
+  const [notes, setNotes] = useState([]);
+  const [aiTaskCompletions, setAiTaskCompletions] = useState({});
+
+  // --- Form States ---
   const [subjectName, setSubjectName] = useState('');
   const [syllabus, setSyllabus] = useState('');
   const [fileData, setFileData] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
   const [dailyHours, setDailyHours] = useState(4);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
-  const [customTodos, setCustomTodos] = useState(() => JSON.parse(localStorage.getItem('smartPlannerCustomTodos') || '[]'));
-  const [dailySchedules, setDailySchedules] = useState(() => JSON.parse(localStorage.getItem('smartPlannerSchedules') || '{}'));
-  const [notes, setNotes] = useState(() => JSON.parse(localStorage.getItem('smartPlannerNotes') || '[]'));
 
   useEffect(() => { localStorage.setItem('smartPlannerTheme', theme); }, [theme]);
-  useEffect(() => { localStorage.setItem('smartPlannerPlans', JSON.stringify(plans)); }, [plans]);
-  useEffect(() => { localStorage.setItem('smartPlannerCustomTodos', JSON.stringify(customTodos)); }, [customTodos]);
-  useEffect(() => { localStorage.setItem('smartPlannerSchedules', JSON.stringify(dailySchedules)); }, [dailySchedules]);
-  useEffect(() => { localStorage.setItem('smartPlannerNotes', JSON.stringify(notes)); }, [notes]);
 
+  // --- FIREBASE AUTHENTICATION ---
+  useEffect(() => {
+    if (!auth) { setAuthLoading(false); return; }
+    
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthLoading(true); setAuthError('');
+    try {
+      if (authMode === 'login') {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+      setShowAuthModal(false);
+    } catch (err) {
+      setAuthError(err.message.replace('Firebase: ', ''));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (auth) await signOut(auth);
+  };
+
+  // --- FIREBASE REAL-TIME CLOUD SYNC ---
+  useEffect(() => {
+    if (!user || !db) {
+       // Clear local arrays if user signs out to protect privacy
+       setPlans([]); setCustomTodos([]); setDailySchedules({}); setNotes([]); setAiTaskCompletions({});
+       return; 
+    }
+
+    // 1. Sync Plans
+    const plansRef = collection(db, 'artifacts', appId, 'users', user.uid, 'plans');
+    const unsubPlans = onSnapshot(plansRef, (snap) => setPlans(snap.docs.map(d => d.data())), e => console.error(e));
+
+    // 2. Sync Custom Todos
+    const todosRef = collection(db, 'artifacts', appId, 'users', user.uid, 'customTodos');
+    const unsubTodos = onSnapshot(todosRef, (snap) => setCustomTodos(snap.docs.map(d => d.data())), e => console.error(e));
+
+    // 3. Sync Notes
+    const notesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notes');
+    const unsubNotes = onSnapshot(notesRef, (snap) => setNotes(snap.docs.map(d => d.data())), e => console.error(e));
+
+    // 4. Sync AI Completions (Stored as {completed: true} in docs named by taskId)
+    const completionsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'aiTaskCompletions');
+    const unsubComps = onSnapshot(completionsRef, (snap) => {
+      const comps = {};
+      snap.docs.forEach(d => { comps[d.id] = d.data().completed; });
+      setAiTaskCompletions(comps);
+    }, e => console.error(e));
+
+    // 5. Sync Daily Schedules (Stored as arrays inside docs named by dateStr)
+    const schedulesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'dailySchedules');
+    const unsubScheds = onSnapshot(schedulesRef, (snap) => {
+      const scheds = {};
+      snap.docs.forEach(d => { scheds[d.id] = d.data().items || []; });
+      setDailySchedules(scheds);
+    }, e => console.error(e));
+
+    return () => { unsubPlans(); unsubTodos(); unsubNotes(); unsubComps(); unsubScheds(); };
+  }, [user]);
+
+  // --- Compute Master AI Todo Array ---
   useEffect(() => {
     const allAiTodos = plans.flatMap(plan => 
       plan.schedule.flatMap(day => 
         day.topics.map((t, idx) => {
           const id = `${plan.id}-${day.date}-${idx}`;
-          const existing = todos.find(pt => pt.id === id);
           return {
             id,
             subjectName: plan.subjectName,
             date: day.date,
             text: t.topicName,
-            completed: existing ? existing.completed : false,
-            allocatedHours: t.allocatedHours
+            completed: aiTaskCompletions[id] || false,
+            allocatedHours: t.allocatedHours,
+            difficulty: t.difficulty
           };
         })
       )
     );
     setTodos(allAiTodos);
-  }, [plans]);
+  }, [plans, aiTaskCompletions]);
+
+  // --- FIREBASE WRITE ACTIONS ---
+  const handleGenerate = async () => {
+    if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
+    if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content.'); return; }
+    setError(''); setIsGenerating(true);
+    try {
+      const newPlan = await generateStudyPlan(subjectName, syllabus, fileData, startDate, endDate, dailyHours);
+      if (user && db) {
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'plans', newPlan.id), newPlan);
+      }
+      setSubjectName(''); setSyllabus(''); setFileData(null); setFileName('');
+      setActiveTab('todo');
+    } catch (err) { setError('Error generating plan.'); } finally { setIsGenerating(false); }
+  };
+
+  const deletePlan = async (id) => {
+    if (user && db) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'plans', id));
+  };
+
+  const toggleTodo = async (id) => {
+    const currentStatus = aiTaskCompletions[id] || false;
+    if (user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'aiTaskCompletions', id), { completed: !currentStatus });
+  };
+
+  const addCustomTodo = async (t, p, d) => {
+    const newId = Date.now().toString();
+    const newTodo = { id: newId, text: t, completed: false, priority: p, dueDate: d };
+    if (user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'customTodos', newId), newTodo);
+  };
+
+  const toggleCustomTodo = async (id) => {
+    const todo = customTodos.find(t => t.id === id);
+    if (todo && user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'customTodos', id), { ...todo, completed: !todo.completed });
+  };
+
+  const editCustomTodo = async (id, txt) => {
+    const todo = customTodos.find(t => t.id === id);
+    if (todo && user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'customTodos', id), { ...todo, text: txt });
+  };
+
+  const deleteCustomTodo = async (id) => {
+    if (user && db) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'customTodos', id));
+  };
+
+  const addDailySchedule = async (dateStr, s, e, a) => {
+    if (!user || !db) return;
+    const newItem = { id: Date.now().toString(), startTime: s, endTime: e, activity: a };
+    const existingItems = dailySchedules[dateStr] || [];
+    const updatedItems = [...existingItems, newItem].sort((x, y) => x.startTime.localeCompare(y.startTime));
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'dailySchedules', dateStr), { items: updatedItems });
+  };
+
+  const deleteDailySchedule = async (dateStr, id) => {
+    if (!user || !db) return;
+    const existingItems = dailySchedules[dateStr] || [];
+    const updatedItems = existingItems.filter(i => i.id !== id);
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'dailySchedules', dateStr), { items: updatedItems });
+  };
+
+  const syncNoteToCloud = async (noteObj) => {
+    if (user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', noteObj.id), noteObj);
+  };
+
+  const handleNotesUpdate = (newNoteObjOrId, isUpdate = false, isDelete = false) => {
+    if (isDelete) {
+      if (user && db) deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', newNoteObjOrId.id));
+    } else {
+      syncNoteToCloud(newNoteObjOrId);
+    }
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -625,27 +796,57 @@ export default function App() {
   };
 
   const clearFile = () => { setFileData(null); setFileName(''); };
-  const toggleTodo = (id) => setTodos(todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  const addDailySchedule = (dateStr, s, e, a) => setDailySchedules(prev => ({ ...prev, [dateStr]: [...(prev[dateStr] || []), { id: Date.now().toString(), startTime: s, endTime: e, activity: a }].sort((x, y) => x.startTime.localeCompare(y.startTime)) }));
-  const deleteDailySchedule = (dateStr, id) => setDailySchedules(prev => ({ ...prev, [dateStr]: prev[dateStr]?.filter(i => i.id !== id) || [] }));
 
-  const handleGenerate = async () => {
-    if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
-    if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content.'); return; }
-    setError(''); setIsGenerating(true);
-    try {
-      const newPlan = await generateStudyPlan(subjectName, syllabus, fileData, startDate, endDate, dailyHours);
-      setPlans([...plans, newPlan]);
-      setSubjectName(''); setSyllabus(''); setFileData(null); setFileName('');
-    } catch (err) { setError('Error generating plan.'); } finally { setIsGenerating(false); }
-  };
-
-  const deletePlan = (id) => setPlans(plans.filter(p => p.id !== id));
   const availableThemes = ['light', 'dark', 'cyber', 'modern', 'pastel', 'midnight', 'forest', 'sunset'];
+  const isAnonymous = user ? user.isAnonymous : true;
 
   return (
     <div className={`min-h-screen bg-slate-50 text-slate-800 font-sans theme-${theme}`}>
       <style>{themeStyles}</style>
+
+      {/* --- Authentication Modal --- */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-slate-200">
+            <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-800"><X size={20}/></button>
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4"><Cloud size={32} /></div>
+              <h2 className="text-2xl font-bold text-slate-900">{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
+              <p className="text-sm text-slate-500 mt-1">Save your study progress securely online.</p>
+            </div>
+            
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500"/>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                <div className="relative mt-1">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} required minLength="6" className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500"/>
+                </div>
+              </div>
+              {authError && <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl flex items-center gap-2"><AlertCircle size={14}/> {authError}</div>}
+              <button type="submit" disabled={authLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                {authLoading ? <Loader2 size={18} className="animate-spin" /> : authMode === 'login' ? 'Login' : 'Sign Up'}
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center text-sm text-slate-600">
+              {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
+              <button onClick={() => {setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError('');}} className="font-bold text-indigo-600 hover:underline">
+                {authMode === 'login' ? 'Sign Up' : 'Login'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Main Navigation --- */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 md:px-8 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between py-3">
           <div onClick={() => setActiveTab('home')} className="flex items-center gap-2 cursor-pointer"><div className="bg-indigo-600 p-1.5 rounded-lg text-white"><BrainCircuit size={20} /></div><h1 className="font-bold text-slate-900 hidden sm:block">SmartPlanner</h1></div>
@@ -655,14 +856,57 @@ export default function App() {
             <button onClick={() => setActiveTab('todo')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'todo' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}><ListTodo size={18} />To-Do</button>
             <button onClick={() => setActiveTab('notes')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'notes' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}><StickyNote size={18} />Notes</button>
             <button onClick={() => setActiveTab('history')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'history' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 size={18} />Analysis</button>
+            
             <div className="h-6 w-px bg-slate-200 mx-1 sm:mx-2 shrink-0"></div>
+            
+            {/* Theme Toggle */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0 relative"><Palette size={16} className="text-slate-400 hidden lg:block" /><button onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)} className="flex items-center gap-1 p-1 sm:px-3 sm:py-2 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors pointer-cursor"><span className="capitalize">{theme}</span><ChevronDown size={14} /></button>
               {isThemeDropdownOpen && (<><div className="fixed inset-0 z-40" onClick={() => setIsThemeDropdownOpen(false)}></div><div className="absolute right-0 top-full mt-2 w-32 bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden z-50 py-1">{availableThemes.map((t) => (<button key={t} onClick={() => { setTheme(t); setIsThemeDropdownOpen(false); }} className={`w-full text-left px-4 py-2 text-sm transition-colors capitalize ${theme === t ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-700 hover:bg-slate-50'}`}>{t}</button>))}</div></>)}
             </div>
           </div>
         </div>
       </nav>
+
+      {/* --- Main Content Area --- */}
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+
+        {/* --- Cloud Sync & Auth Banner (Moved below Nav) --- */}
+        <div className="bg-card p-4 rounded-2xl border border-custom shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {authLoading ? (
+              <><Loader2 size={18} className="animate-spin text-sub" /><span className="text-sm font-bold text-sub">Checking sync status...</span></>
+            ) : isAnonymous ? (
+              <><CloudOff size={20} className="text-amber-500" /><span className="text-sm font-bold text-custom">Local Mode <span className="font-normal text-sub">(Data not synced)</span></span></>
+            ) : (
+              <><Cloud size={20} className="text-emerald-500" /><span className="text-sm font-bold text-custom">Cloud Sync Active <span className="font-normal text-sub">({user?.email})</span></span></>
+            )}
+          </div>
+          <div>
+            {!authLoading && (
+              isAnonymous ? (
+                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity">
+                  <LogIn size={16} /> Login to Sync
+                </button>
+              ) : (
+                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-custom text-custom hover:opacity-70 text-xs font-bold transition-colors">
+                  <LogOut size={16} /> Logout
+                </button>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Offline Warning for Github Pages (if API key is missing) */}
+        {!db && (
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
+            <CloudOff className="text-amber-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <h3 className="font-bold text-amber-800 text-sm">Cloud Sync Offline</h3>
+              <p className="text-amber-700 text-xs mt-1">To enable saving data across devices on your live site, you must add your Firebase Project configuration inside `App.jsx`.</p>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'home' && <HomeView setActiveTab={setActiveTab} setTheme={setTheme} currentTheme={theme} />}
         {activeTab === 'planner' && (
           <div className="animate-in fade-in duration-300">
@@ -703,8 +947,8 @@ export default function App() {
           </div>
         )}
         {activeTab === 'calendar' && <div className="animate-in fade-in duration-300"><CalendarView plans={plans} dailySchedules={dailySchedules} addDailySchedule={addDailySchedule} deleteDailySchedule={deleteDailySchedule} /></div>}
-        {activeTab === 'todo' && <div className="animate-in fade-in duration-300"><TodoView todos={todos} toggleTodo={toggleTodo} customTodos={customTodos} addCustomTodo={(t,p,d) => setCustomTodos([...customTodos, { id: Date.now().toString(), text: t, completed: false, priority: p, dueDate: d }])} toggleCustomTodo={(id) => setCustomTodos(customTodos.map(t => t.id === id ? { ...t, completed: !t.completed } : t))} deleteCustomTodo={(id) => setCustomTodos(customTodos.filter(t => t.id !== id))} editCustomTodo={(id, txt) => setCustomTodos(customTodos.map(t => t.id === id ? { ...t, text: txt } : t))} /></div>}
-        {activeTab === 'notes' && <div className="animate-in fade-in duration-300"><NotesView notes={notes} setNotes={setNotes} /></div>}
+        {activeTab === 'todo' && <div className="animate-in fade-in duration-300"><TodoView todos={todos} toggleTodo={toggleTodo} customTodos={customTodos} addCustomTodo={addCustomTodo} toggleCustomTodo={toggleCustomTodo} deleteCustomTodo={deleteCustomTodo} editCustomTodo={editCustomTodo} /></div>}
+        {activeTab === 'notes' && <div className="animate-in fade-in duration-300"><NotesView notes={notes} setNotes={handleNotesUpdate} /></div>}
         {activeTab === 'history' && <div className="animate-in fade-in duration-300"><HistoryView plans={plans} customTodos={customTodos} todos={todos} dailySchedules={dailySchedules} /></div>}
       </div>
     </div>

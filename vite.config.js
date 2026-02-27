@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  base: '/smart-planner/',
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  base: '/smart-planner/', // <-- Keep your actual repo name here!
 })
