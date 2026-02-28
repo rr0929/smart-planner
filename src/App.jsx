@@ -39,7 +39,6 @@ const isConfigured = true;
 
 // --- API Utilities ---
 // [IMPORTANT] Paste your AIzaSyBM... Gemini key between these quotes on your local PC!
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
@@ -60,7 +59,7 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 
 const generateStudyPlan = async (subjectName, syllabusText, fileData, startDate, endDate, dailyHours) => {
   // [Inference] Upgraded to gemini-1.5-pro, which is fully designed to handle application/pdf payloads.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `/api/generate`;
   
   const systemInstruction = `You are an expert academic study planner for the subject: "${subjectName}". 
 Your task is to analyze a provided syllabus and create a realistic, day-by-day study schedule between the start date and end date.
@@ -705,8 +704,7 @@ export default function App() {
   const handleGenerate = async () => {
     if (!subjectName.trim()) { setError('Please give this subject a name.'); return; }
     if (!syllabus.trim() && !fileData) { setError('Please provide syllabus content or upload a PDF.'); return; }
-    if (!apiKey) { setError('Missing Gemini API Key. Please add it to App.jsx (line 42).'); return; }
-    
+   
     setError(''); setIsGenerating(true);
     try {
       const newPlan = await generateStudyPlan(subjectName, syllabus, fileData, startDate, endDate, dailyHours);
