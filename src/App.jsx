@@ -60,7 +60,7 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 
 const generateStudyPlan = async (subjectName, syllabusText, fileData, startDate, endDate, dailyHours) => {
   // [Inference] Upgraded to gemini-1.5-pro, which is fully designed to handle application/pdf payloads.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   
   const systemInstruction = `You are an expert academic study planner for the subject: "${subjectName}". 
 Your task is to analyze a provided syllabus and create a realistic, day-by-day study schedule between the start date and end date.
