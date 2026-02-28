@@ -13,6 +13,7 @@
     "deploy": "npx gh-pages -d dist"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "firebase": "^12.9.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
