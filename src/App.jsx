@@ -39,7 +39,7 @@ const isConfigured = true;
 
 // --- API Utilities ---
 // [IMPORTANT] Paste your AIzaSyBM... Gemini key between these quotes on your local PC!
-const apiKey = ""; 
+const apiKey = "AIzaSyBCZ9vM2SuCFh5izL1-BGXF1CRe_FsblR0"; 
 
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
